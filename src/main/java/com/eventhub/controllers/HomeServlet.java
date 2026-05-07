@@ -2,45 +2,39 @@ package com.eventhub.controllers;
 
 import com.eventhub.model.Event;
 import com.eventhub.service.EventService;
+import com.eventhub.util.SessionUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * HomeServlet — Serves the public landing page.
- * Shows recent approved events to both guests and logged-in users.
- */
 @WebServlet("/home")
 public class HomeServlet extends HttpServlet {
 
-    private EventService eventService;
+    private final EventService eventService = new EventService();
 
     @Override
-    public void init() throws ServletException {
-        eventService = new EventService();
-    }
-
-    /**
-     * GET /home — Display the public landing page with recent events.
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        // Fetch recent approved events for the landing page
-        List<Event> recentEvents = eventService.getRecentApproved(6);
-        request.setAttribute("recentEvents", recentEvents);
+        // If already logged in, go straight to dashboard
+        if (SessionUtil.isLoggedIn(req)) {
+            resp.sendRedirect(req.getContextPath() + "/dashboard");
+            return;
+        }
 
-        // Count stats for display
-        request.setAttribute("totalEvents", eventService.countAll());
-        request.setAttribute("approvedEvents", eventService.countByStatus("approved"));
+        List<Event> featuredEvents = new ArrayList<>();
+        try {
+            featuredEvents = eventService.getRecentApproved(6);
+        } catch (Exception ignored) {}
 
-        // Forward to home JSP
-        request.getRequestDispatcher("/WEB-INF/views/user/home.jsp").forward(request, response);
+        req.setAttribute("featuredEvents", featuredEvents);
+        req.getRequestDispatcher("/WEB-INF/views/user/home.jsp").forward(req, resp);
     }
 }

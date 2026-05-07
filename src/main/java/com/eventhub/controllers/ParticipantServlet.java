@@ -1,97 +1,56 @@
 package com.eventhub.controllers;
 
-import com.eventhub.model.Event;
-import com.eventhub.service.EventService;
 import com.eventhub.service.ParticipantService;
+import com.eventhub.util.EventHubException;
+import com.eventhub.util.SessionUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+
 import java.io.IOException;
 
 /**
- * ParticipantServlet — Handles joining and leaving events.
- * POST /participants/join — Join an event
- * POST /participants/leave — Leave an event
+ * Handles join/leave for an event. Accepts either:
+ *   POST /participant            with action=join|leave  (legacy form)
+ *   POST /participants/join      (path-based action)
+ *   POST /participants/leave     (path-based action)
  */
-@WebServlet("/participants/*")
+@WebServlet({"/participant", "/participants/join", "/participants/leave"})
 public class ParticipantServlet extends HttpServlet {
 
-    private ParticipantService participantService;
-    private EventService eventService;
+    private final ParticipantService participantService = new ParticipantService();
 
     @Override
-    public void init() throws ServletException {
-        participantService = new ParticipantService();
-        eventService = new EventService();
-    }
-
-    /**
-     * POST /participants/join or /participants/leave
-     */
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
+        int    userId  = SessionUtil.getUserId(req);
+        if (userId <= 0) { resp.sendRedirect(req.getContextPath() + "/login"); return; }
 
-        HttpSession session = request.getSession(false);
-        int userId = (int) session.getAttribute("userId");
-
-        String pathInfo = request.getPathInfo(); // "/join" or "/leave"
-        String eventIdStr = request.getParameter("eventId");
-
-        if (eventIdStr == null) {
-            response.sendRedirect(request.getContextPath() + "/events");
-            return;
+        // Pick action from URL suffix first, fall back to form parameter
+        String path = req.getServletPath();
+        String action = req.getParameter("action");
+        if (path != null) {
+            if (path.endsWith("/join"))  action = "join";
+            if (path.endsWith("/leave")) action = "leave";
         }
 
+        int eventId;
+        try { eventId = Integer.parseInt(req.getParameter("eventId")); }
+        catch (Exception ex) { resp.sendRedirect(req.getContextPath() + "/events"); return; }
+
+        String redirect = req.getContextPath() + "/events/detail?id=" + eventId;
         try {
-            int eventId = Integer.parseInt(eventIdStr);
-            Event event = eventService.findById(eventId);
-
-            if (event == null) {
-                response.sendRedirect(request.getContextPath() + "/events");
-                return;
-            }
-
-            if ("/join".equals(pathInfo)) {
-                // --- Join Event ---
-                // Check if event is approved
-                if (!"approved".equals(event.getStatus())) {
-                    response.sendRedirect(request.getContextPath() + "/events/detail?id=" + eventId + "&error=notapproved");
-                    return;
-                }
-                // Check if user is the owner
-                if (event.getUserId() == userId) {
-                    response.sendRedirect(request.getContextPath() + "/events/detail?id=" + eventId + "&error=owner");
-                    return;
-                }
-                // Check capacity
-                if (event.getMaxParticipants() > 0) {
-                    int currentCount = participantService.countByEvent(eventId);
-                    if (currentCount >= event.getMaxParticipants()) {
-                        response.sendRedirect(request.getContextPath() + "/events/detail?id=" + eventId + "&error=full");
-                        return;
-                    }
-                }
-                // Join the event
+            if ("join".equals(action)) {
                 participantService.joinEvent(userId, eventId);
-
-            } else if ("/leave".equals(pathInfo)) {
-                // --- Leave Event ---
+            } else if ("leave".equals(action)) {
                 participantService.leaveEvent(userId, eventId);
             }
-
-            // Redirect back to event detail page
-            response.sendRedirect(request.getContextPath() + "/events/detail?id=" + eventId);
-
-        } catch (NumberFormatException e) {
-            response.sendRedirect(request.getContextPath() + "/events");
-        } catch (IllegalArgumentException e) {
-            response.sendRedirect(request.getContextPath() + "/events?error=" + e.getMessage());
+            resp.sendRedirect(redirect);
+        } catch (EventHubException e) {
+            resp.sendRedirect(redirect + "&error=" + java.net.URLEncoder.encode(e.getMessage(), "UTF-8"));
         }
     }
 }
-

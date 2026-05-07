@@ -3,71 +3,48 @@ package com.eventhub.controllers;
 import com.eventhub.model.Event;
 import com.eventhub.service.EventService;
 import com.eventhub.service.ParticipantService;
+import com.eventhub.util.EventHubException;
+import com.eventhub.util.SessionUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-import java.io.IOException;
-import java.util.List;
 
-/**
- * EventServlet — Handles browsing and searching approved events.
- * GET /events — Shows all approved events with search/filter.
- */
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 @WebServlet("/events")
 public class EventServlet extends HttpServlet {
 
-    private EventService eventService;
-    private ParticipantService participantService;
+    private final EventService       eventService       = new EventService();
+    private final ParticipantService participantService = new ParticipantService();
 
     @Override
-    public void init() throws ServletException {
-        eventService = new EventService();
-        participantService = new ParticipantService();
-    }
-
-    /**
-     * GET /events — Display approved events, optionally filtered by search.
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
+        String keyword    = req.getParameter("q");
+        String category   = req.getParameter("category");
+        String dateFilter = req.getParameter("date");
+        int    userId     = SessionUtil.getUserId(req);
 
-        // Get search parameters from query string
-        String keyword = request.getParameter("keyword");
-        String category = request.getParameter("category");
-
-        // Fetch events — search if parameters present, otherwise get all approved
-        List<Event> events;
-        if ((keyword != null && !keyword.trim().isEmpty()) || (category != null && !category.trim().isEmpty())) {
-            events = eventService.searchEvents(keyword, category);
-        } else {
-            events = eventService.getApprovedEvents();
-        }
-
-        // Add participant count to each event
-        for (Event event : events) {
-            event.setParticipantCount(participantService.countByEvent(event.getEventId()));
-        }
-
-        // Check which events the current user has joined (if logged in)
-        HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute("userId") != null) {
-            int userId = (int) session.getAttribute("userId");
-            for (Event event : events) {
-                // We'll pass join status as a request attribute map
+        List<Event> events = new ArrayList<>();
+        try {
+            events = eventService.searchEvents(keyword, category, dateFilter);
+            for (Event e : events) {
+                e.setParticipantCount(participantService.countByEvent(e.getEventId()));
             }
-        }
+        } catch (EventHubException ignored) {}
 
-        // Set data for JSP
-        request.setAttribute("events", events);
-        request.setAttribute("keyword", keyword);
-        request.setAttribute("category", category);
+        Map<Integer, Boolean> joinedMap = participantService.buildJoinedMap(userId, events);
 
-        // Forward to events browsing JSP
-        request.getRequestDispatcher("/WEB-INF/views/user/events.jsp").forward(request, response);
+        req.setAttribute("events",           events);
+        req.setAttribute("joinedMap",        joinedMap);
+        req.setAttribute("keyword",          keyword);
+        req.setAttribute("selectedCategory", category);
+        req.getRequestDispatcher("/WEB-INF/views/user/events.jsp").forward(req, resp);
     }
 }

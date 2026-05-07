@@ -1,182 +1,151 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
-<%@ page import="com.eventhub.model.Event,java.util.List" %>
 <%@ include file="/WEB-INF/views/common/header.jsp" %>
-<%@ include file="/WEB-INF/views/common/navbar.jsp" %>
 
-<%
-    List<Event> recentEvents = (List<Event>) request.getAttribute("recentEvents");
-    int totalEvents = (request.getAttribute("totalEvents") != null) ? (int) request.getAttribute("totalEvents") : 0;
-%>
+<div class="relative min-h-screen flex items-center justify-center p-6 overflow-hidden">
+    <!-- Decorative floating blobs -->
+    <div class="fixed top-[10%] right-[5%] w-32 h-32 bg-secondary-container/30 rounded-full blur-2xl -z-10"></div>
+    <div class="fixed bottom-[15%] left-[5%] w-48 h-48 bg-tertiary-container/20 rounded-full blur-3xl -z-10"></div>
 
-<main class="page-transition">
+    <div class="w-full max-w-[1100px] grid grid-cols-1 md:grid-cols-2 bg-surface-container-lowest rounded-xl shadow-[0_24px_48px_-4px_rgba(59,38,75,0.06)] overflow-hidden relative z-10 page-transition">
 
-    <!-- ===== HERO SECTION ===== -->
-    <section class="max-w-7xl mx-auto px-6 py-16 md:py-24">
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
-            <!-- Left: Text content -->
-            <div class="md:col-span-7">
-                <h1 class="text-5xl md:text-6xl font-bold font-headline leading-tight mb-6 text-on-surface">
-                    Discover Your City's<br>
-                    <span class="italic text-primary">Kinetic Rhythm</span>
+        <!-- Left Visual Panel — Hidden on mobile -->
+        <div class="relative hidden md:flex flex-col justify-between p-12 bg-gray-900 text-white min-h-[600px] overflow-hidden">
+            <!-- Background image with gradient overlay -->
+            <img src="https://images.unsplash.com/photo-1605640840605-14ac1855827b?auto=format&fit=crop&w=1000&q=80"
+                 alt="Event" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay">
+            <div class="absolute inset-0 bg-gradient-to-br from-primary/70 via-primary/60 to-secondary/40 mix-blend-multiply"></div>
+
+            <!-- Decorative orb -->
+            <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-secondary rounded-full blur-3xl opacity-40"></div>
+
+            <!-- Content -->
+            <div class="relative z-20">
+                <div class="text-3xl font-black mb-8 tracking-tighter font-headline">EventHub</div>
+                <h1 class="text-5xl font-bold font-headline leading-tight mb-4 text-white">
+                    Experience <br><span class="text-tertiary-container italic">Kinetic</span> <br>Communities.
                 </h1>
-                <p class="text-lg text-on-surface-variant mb-8 max-w-xl leading-relaxed">
-                    From art exhibitions to tech workshops, find events that ignite your passions. Connect with your community and create lasting memories.
-                </p>
-                <div class="flex flex-wrap gap-4">
-                    <a href="${pageContext.request.contextPath}/events" class="primary-gradient text-on-primary px-8 py-4 rounded-full font-bold hover:scale-[1.02] shadow-lg transition-all flex items-center gap-2">
-                        <span class="material-symbols-outlined">explore</span> Explore Events
-                    </a>
-                    <a href="${pageContext.request.contextPath}/register" class="bg-surface-container-lowest border-2 border-primary text-primary px-8 py-4 rounded-full font-bold hover:bg-primary hover:text-on-primary transition-all">
-                        Get Started Free
-                    </a>
-                </div>
-                <!-- Stats row -->
-                <div class="flex gap-8 mt-10">
-                    <div>
-                        <div class="text-3xl font-bold font-headline text-primary"><%= totalEvents %>+</div>
-                        <div class="text-sm text-on-surface-variant">Active Events</div>
-                    </div>
-                    <div>
-                        <div class="text-3xl font-bold font-headline text-primary">12k+</div>
-                        <div class="text-sm text-on-surface-variant">Community Members</div>
-                    </div>
-                    <div>
-                        <div class="text-3xl font-bold font-headline text-primary">6</div>
-                        <div class="text-sm text-on-surface-variant">Event Categories</div>
-                    </div>
-                </div>
+                <p class="text-lg opacity-90 font-light max-w-md">Join vibrant local gatherings, share unforgettable moments, and immerse yourself in the culture of your city.</p>
             </div>
-            <!-- Right: Hero image -->
-            <div class="md:col-span-5 relative">
-                <img src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=600&q=80"
-                     alt="Events" class="rounded-2xl border-8 border-white shadow-2xl w-full object-cover h-[400px]">
-                <!-- Decorative blobs -->
-                <div class="absolute -top-8 -left-8 w-32 h-32 bg-tertiary-container/30 rounded-full blur-2xl -z-10"></div>
-                <div class="absolute -bottom-8 -right-8 w-40 h-40 bg-secondary-container/30 rounded-full blur-2xl -z-10"></div>
-            </div>
-        </div>
-    </section>
 
-    <!-- ===== WHAT WE OFFER ===== -->
-    <section class="bg-surface-container-low py-20">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-                <!-- Left: Image mosaic -->
-                <div class="grid grid-cols-2 gap-4">
-                    <img src="https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=300&q=80"
-                         alt="Workshop" class="rounded-xl w-full h-48 object-cover shadow-md col-span-2">
-                    <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=300&q=80"
-                         alt="Seminar" class="rounded-xl w-full h-40 object-cover shadow-md">
-                    <img src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=300&q=80"
-                         alt="Cultural" class="rounded-xl w-full h-40 object-cover shadow-md">
-                </div>
-                <!-- Right: Feature cards -->
-                <div>
-                    <h2 class="text-3xl font-bold font-headline mb-8 text-on-surface">What We Offer</h2>
-                    <div class="space-y-6">
-                        <div class="flex gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                                <span class="material-symbols-outlined text-primary">event</span>
-                            </div>
-                            <div>
-                                <h3 class="font-bold font-headline text-on-surface mb-1">Discover Events</h3>
-                                <p class="text-sm text-on-surface-variant">Browse through workshops, seminars, meetups, cultural shows, and sports events near you.</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center shrink-0">
-                                <span class="material-symbols-outlined text-secondary">add_circle</span>
-                            </div>
-                            <div>
-                                <h3 class="font-bold font-headline text-on-surface mb-1">Host Your Own</h3>
-                                <p class="text-sm text-on-surface-variant">Create and manage events, set capacity limits, and track participants seamlessly.</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center shrink-0">
-                                <span class="material-symbols-outlined text-tertiary">group</span>
-                            </div>
-                            <div>
-                                <h3 class="font-bold font-headline text-on-surface mb-1">Build Community</h3>
-                                <p class="text-sm text-on-surface-variant">Connect with like-minded people, join local gatherings, and grow your network.</p>
-                            </div>
-                        </div>
+            <!-- Stats chips -->
+            <div class="relative z-20">
+                <div class="flex gap-4 mb-8">
+                    <div class="bg-white/20 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">group</span>
+                        <span class="text-sm font-bold">12k+ Active Users</span>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">event</span>
+                        <span class="text-sm font-bold">250 Events Today</span>
                     </div>
                 </div>
+                <div class="text-sm opacity-70">&copy; 2026 EventHub. Let's make memories.</div>
             </div>
         </div>
-    </section>
 
-    <!-- ===== HOW IT WORKS ===== -->
-    <section class="bg-white py-20">
-        <div class="max-w-7xl mx-auto px-6 text-center">
-            <h2 class="text-3xl font-bold font-headline mb-4 text-on-surface">How It Works</h2>
-            <p class="text-on-surface-variant mb-12 max-w-lg mx-auto">Three simple steps to get started with EventHub.</p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Step 1 -->
-                <div class="bg-surface/50 backdrop-blur-md border border-outline-variant/20 rounded-xl p-8 shadow-sm hover:shadow-md transition-shadow">
-                    <div class="w-14 h-14 rounded-full primary-gradient flex items-center justify-center mx-auto mb-6 text-white font-bold text-xl">1</div>
-                    <h3 class="font-bold font-headline text-lg mb-3 text-on-surface">Create Account</h3>
-                    <p class="text-sm text-on-surface-variant">Sign up in seconds with your email. It's completely free.</p>
-                </div>
-                <!-- Step 2 (staggered) -->
-                <div class="bg-surface/50 backdrop-blur-md border border-outline-variant/20 rounded-xl p-8 shadow-sm hover:shadow-md transition-shadow md:mt-12">
-                    <div class="w-14 h-14 rounded-full bg-tertiary flex items-center justify-center mx-auto mb-6 text-white font-bold text-xl">2</div>
-                    <h3 class="font-bold font-headline text-lg mb-3 text-on-surface">Browse & Join</h3>
-                    <p class="text-sm text-on-surface-variant">Search events by category, keyword, or location. Join with one click.</p>
-                </div>
-                <!-- Step 3 -->
-                <div class="bg-surface/50 backdrop-blur-md border border-outline-variant/20 rounded-xl p-8 shadow-sm hover:shadow-md transition-shadow">
-                    <div class="w-14 h-14 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6 text-white font-bold text-xl">3</div>
-                    <h3 class="font-bold font-headline text-lg mb-3 text-on-surface">Host & Share</h3>
-                    <p class="text-sm text-on-surface-variant">Create your own events, set details and capacity, and share with the community.</p>
-                </div>
+        <!-- Right Form Panel -->
+        <div class="p-8 md:p-20 bg-surface-container-lowest flex flex-col justify-center">
+            <div class="mb-10">
+                <!-- Mobile logo -->
+                <div class="md:hidden text-2xl font-black font-headline text-primary tracking-tighter mb-6">EventHub</div>
+                <h2 class="text-3xl font-bold font-headline mb-2 text-on-surface">Welcome Back</h2>
+                <p class="text-on-surface-variant">Please enter your details to sign in.</p>
             </div>
-        </div>
-    </section>
 
-    <!-- ===== RECENT EVENTS PREVIEW ===== -->
-    <% if (recentEvents != null && !recentEvents.isEmpty()) { %>
-    <section class="max-w-7xl mx-auto px-6 py-20">
-        <div class="flex justify-between items-center mb-10">
-            <h2 class="text-3xl font-bold font-headline text-on-surface">Upcoming Events</h2>
-            <a href="${pageContext.request.contextPath}/events" class="text-primary font-bold text-sm hover:underline flex items-center gap-1">
-                View All <span class="material-symbols-outlined text-lg">arrow_forward</span>
-            </a>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <% for (Event event : recentEvents) { %>
-            <a href="${pageContext.request.contextPath}/events/detail?id=<%= event.getEventId() %>"
-               class="bg-surface-container-lowest rounded-xl border border-outline-variant/15 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all p-6 block">
-                <!-- Category badge -->
-                <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary mb-4"><%= event.getCategory() %></span>
-                <h3 class="font-bold font-headline text-lg text-on-surface mb-2 line-clamp-2"><%= event.getTitle() %></h3>
-                <p class="text-sm text-on-surface-variant mb-4 line-clamp-2"><%= event.getExcerpt() %></p>
-                <div class="flex items-center gap-4 text-xs text-on-surface-variant">
-                    <span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">calendar_today</span> <%= event.getEventDate() %></span>
-                    <span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">location_on</span> <%= event.getLocation() %></span>
-                </div>
-            </a>
+            <!-- Success message -->
+            <% String success = request.getParameter("success"); %>
+            <% if ("registered".equals(success)) { %>
+            <div class="mb-6 p-4 bg-green-50 text-green-700 rounded-lg border border-green-200 text-sm font-medium flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">check_circle</span>
+                Account created successfully! Please log in.
+            </div>
+            <% } else if ("loggedout".equals(success)) { %>
+            <div class="mb-6 p-4 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 text-sm font-medium flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">info</span>
+                You have been logged out.
+            </div>
             <% } %>
-        </div>
-    </section>
-    <% } %>
 
-    <!-- ===== CTA SECTION ===== -->
-    <section class="max-w-7xl mx-auto px-6 pb-20">
-        <div class="primary-gradient rounded-3xl p-12 md:p-16 text-center text-white">
-            <h2 class="text-3xl md:text-4xl font-bold font-headline mb-4">Ready to Get Started?</h2>
-            <p class="text-lg opacity-90 mb-8 max-w-lg mx-auto">Join thousands of event enthusiasts. Create or discover events today.</p>
-            <div class="flex flex-wrap justify-center gap-4">
-                <a href="${pageContext.request.contextPath}/register" class="bg-white text-primary px-8 py-4 rounded-full font-bold hover:scale-[1.02] shadow-lg transition-all">
-                    Join Now — It's Free
-                </a>
-                <a href="${pageContext.request.contextPath}/events" class="border-2 border-white text-white px-8 py-4 rounded-full font-bold hover:bg-white/10 transition-all">
-                    Browse Events
-                </a>
+            <!-- Error message -->
+            <% String errorMsg = (String) request.getAttribute("errorMsg"); %>
+            <% if (errorMsg != null) { %>
+            <div class="mb-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 text-sm font-medium flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">error</span>
+                <%= errorMsg %>
+            </div>
+            <% } %>
+
+            <!-- Auth error from filter redirect -->
+            <% if ("auth".equals(request.getParameter("error"))) { %>
+            <div class="mb-6 p-4 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-200 text-sm font-medium flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">warning</span>
+                Please log in to access that page.
+            </div>
+            <% } %>
+
+            <!-- Login Form -->
+            <form action="${pageContext.request.contextPath}/login" method="POST" class="space-y-6">
+                <!-- Email field -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2" for="email">Email Address</label>
+                    <div class="relative">
+                        <input type="email" id="email" name="email"
+                               value="<%= request.getAttribute("email") != null ? request.getAttribute("email") : (request.getAttribute("savedEmail") != null ? request.getAttribute("savedEmail") : "") %>"
+                               required placeholder="alex@example.com"
+                               class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                        <span class="material-symbols-outlined absolute right-4 top-3.5 text-on-surface-variant">mail</span>
+                    </div>
+                </div>
+
+                <!-- Password field -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-semibold" for="password">Password</label>
+                        <a href="${pageContext.request.contextPath}/forgot-password" class="text-sm text-primary font-semibold hover:underline">Forgot Password?</a>
+                    </div>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" required placeholder="••••••••"
+                               class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                        <span class="material-symbols-outlined absolute right-4 top-3.5 text-on-surface-variant">lock</span>
+                    </div>
+                </div>
+
+                <!-- Remember me checkbox -->
+                <div class="flex items-center">
+                    <input type="checkbox" id="remember" name="remember" class="w-4 h-4 text-primary rounded border-outline-variant focus:ring-primary">
+                    <label for="remember" class="ml-2 text-sm text-on-surface-variant">Remember for 30 days</label>
+                </div>
+
+                <!-- Submit button -->
+                <button type="submit" class="w-full py-4 primary-gradient text-on-primary font-bold rounded-full hover:scale-[1.02] shadow-lg transition-all">
+                    Sign In
+                </button>
+            </form>
+
+            <!-- Social login divider -->
+            <div class="mt-8 flex items-center gap-4">
+                <div class="flex-1 border-t border-outline-variant/30 border-dashed"></div>
+                <div class="text-sm text-on-surface-variant font-medium">or continue with</div>
+                <div class="flex-1 border-t border-outline-variant/30 border-dashed"></div>
+            </div>
+
+            <!-- Social buttons -->
+            <div class="mt-6 grid grid-cols-2 gap-4">
+                <button class="flex items-center justify-center gap-2 py-3 rounded-full bg-surface-container-low hover:bg-surface-container transition-colors text-sm font-bold border border-outline-variant/20">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google"> Google
+                </button>
+                <button class="flex items-center justify-center gap-2 py-3 rounded-full bg-surface-container-low hover:bg-surface-container transition-colors text-sm font-bold border border-outline-variant/20">
+                    <span class="material-symbols-outlined text-xl">smartphone</span> Apple
+                </button>
+            </div>
+
+            <!-- Register link -->
+            <div class="mt-10 text-center">
+                <span class="text-on-surface-variant text-sm">Don't have an account? </span>
+                <a href="${pageContext.request.contextPath}/register" class="text-primary font-bold text-sm hover:underline underline-offset-4">Register Now</a>
             </div>
         </div>
-    </section>
-</main>
+    </div>
+</div>
 
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>

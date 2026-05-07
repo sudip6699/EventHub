@@ -3,80 +3,63 @@ package com.eventhub.controllers;
 import com.eventhub.model.Event;
 import com.eventhub.service.EventService;
 import com.eventhub.service.ParticipantService;
+import com.eventhub.util.EventHubException;
+import com.eventhub.util.SessionUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+
 import java.io.IOException;
 
-/**
- * EventDetailServlet — Shows detailed information about a single event.
- * GET /events/detail?id=X — Display event detail page.
- */
 @WebServlet("/events/detail")
 public class EventDetailServlet extends HttpServlet {
 
-    private EventService eventService;
-    private ParticipantService participantService;
+    private final EventService       eventService       = new EventService();
+    private final ParticipantService participantService = new ParticipantService();
 
     @Override
-    public void init() throws ServletException {
-        eventService = new EventService();
-        participantService = new ParticipantService();
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        int userId   = SessionUtil.getUserId(req);
+        String idParam = req.getParameter("id");
+        if (idParam == null) { resp.sendRedirect(req.getContextPath() + "/events"); return; }
+        try {
+            Event event = eventService.getEventById(Integer.parseInt(idParam));
+            if (event == null) { resp.sendRedirect(req.getContextPath() + "/events"); return; }
+            int participantCount = participantService.countByEvent(event.getEventId());
+            event.setParticipantCount(participantCount);
+            boolean isJoined = userId > 0 && participantService.isJoined(userId, event.getEventId());
+            boolean isOwner  = userId > 0 && event.getHostId() == userId;
+            req.setAttribute("event",            event);
+            req.setAttribute("participantCount", participantCount);
+            req.setAttribute("isJoined",         isJoined);
+            req.setAttribute("isOwner",          isOwner);
+            req.setAttribute("isFull",           participantCount >= event.getMaxParticipants());
+            req.getRequestDispatcher("/WEB-INF/views/user/eventdetail.jsp").forward(req, resp);
+        } catch (EventHubException e) {
+            req.setAttribute("errorMsg", e.getMessage());
+            req.getRequestDispatcher("/WEB-INF/views/user/eventdetail.jsp").forward(req, resp);
+        }
     }
 
-    /**
-     * GET /events/detail?id=X — Display event details.
-     */
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-
-        // Parse event ID from query parameter
-        String idParam = request.getParameter("id");
-        if (idParam == null) {
-            response.sendRedirect(request.getContextPath() + "/events");
-            return;
-        }
-
+        int userId = SessionUtil.getUserId(req);
+        String action  = req.getParameter("action");
+        int    eventId = Integer.parseInt(req.getParameter("eventId"));
         try {
-            int eventId = Integer.parseInt(idParam);
-
-            // Fetch event from service
-            Event event = eventService.findById(eventId);
-            if (event == null) {
-                response.sendRedirect(request.getContextPath() + "/error/404");
-                return;
+            if ("join".equals(action)) {
+                participantService.joinEvent(userId, eventId);
+            } else if ("leave".equals(action)) {
+                participantService.cancelParticipation(userId, eventId);
             }
-
-            // Get participant count for this event
-            int participantCount = participantService.countByEvent(eventId);
-            event.setParticipantCount(participantCount);
-
-            // Check if current user has joined this event
-            HttpSession session = request.getSession(false);
-            boolean isJoined = false;
-            boolean isOwner = false;
-            if (session != null && session.getAttribute("userId") != null) {
-                int userId = (int) session.getAttribute("userId");
-                isJoined = participantService.isJoined(userId, eventId);
-                isOwner = (event.getUserId() == userId);
-            }
-
-            // Set attributes for JSP
-            request.setAttribute("event", event);
-            request.setAttribute("participantCount", participantCount);
-            request.setAttribute("isJoined", isJoined);
-            request.setAttribute("isOwner", isOwner);
-
-            // Forward to event detail JSP
-            request.getRequestDispatcher("/WEB-INF/views/user/eventDetail.jsp").forward(request, response);
-
-        } catch (NumberFormatException e) {
-            response.sendRedirect(request.getContextPath() + "/events");
+            resp.sendRedirect(req.getContextPath() + "/events/detail?id=" + eventId);
+        } catch (EventHubException e) {
+            resp.sendRedirect(req.getContextPath() + "/events/detail?id=" + eventId + "&error=" + e.getMessage());
         }
     }
 }

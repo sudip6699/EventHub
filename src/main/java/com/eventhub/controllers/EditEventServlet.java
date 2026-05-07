@@ -2,136 +2,64 @@ package com.eventhub.controllers;
 
 import com.eventhub.model.Event;
 import com.eventhub.service.EventService;
+import com.eventhub.util.EventHubException;
+import com.eventhub.util.SessionUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-import java.io.IOException;
-import java.sql.Date;
-import java.sql.Time;
 
-/**
- * EditEventServlet — Handles event editing (GET shows pre-filled form, POST updates).
- * Only the event owner or an admin can edit an event.
- */
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+
 @WebServlet("/events/edit")
 public class EditEventServlet extends HttpServlet {
 
-    private EventService eventService;
+    private final EventService eventService = new EventService();
 
     @Override
-    public void init() throws ServletException {
-        eventService = new EventService();
-    }
-
-    /**
-     * GET /events/edit?id=X — Display the edit form pre-filled with event data.
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-
-        String idParam = request.getParameter("id");
-        if (idParam == null) {
-            response.sendRedirect(request.getContextPath() + "/events/my");
-            return;
-        }
-
+        int userId = SessionUtil.getUserId(req);
+        String idParam = req.getParameter("id");
+        if (idParam == null) { resp.sendRedirect(req.getContextPath() + "/events/my"); return; }
         try {
-            int eventId = Integer.parseInt(idParam);
-            Event event = eventService.findById(eventId);
-
-            if (event == null) {
-                response.sendRedirect(request.getContextPath() + "/error/404");
-                return;
+            Event event = eventService.getEventById(Integer.parseInt(idParam));
+            if (event == null || event.getHostId() != userId) {
+                resp.sendRedirect(req.getContextPath() + "/events/my"); return;
             }
-
-            // Check ownership — only owner or admin can edit
-            HttpSession session = request.getSession(false);
-            int userId = (int) session.getAttribute("userId");
-            String userRole = (String) session.getAttribute("userRole");
-            if (event.getUserId() != userId && !"admin".equals(userRole)) {
-                response.sendRedirect(request.getContextPath() + "/error/403");
-                return;
-            }
-
-            // Set event for pre-filling form
-            request.setAttribute("event", event);
-            request.getRequestDispatcher("/WEB-INF/views/user/editEvent.jsp").forward(request, response);
-
-        } catch (NumberFormatException e) {
-            response.sendRedirect(request.getContextPath() + "/events/my");
+            req.setAttribute("event", event);
+            req.getRequestDispatcher("/WEB-INF/views/user/editevent.jsp").forward(req, resp);
+        } catch (EventHubException e) {
+            req.setAttribute("errorMsg", e.getMessage());
+            req.getRequestDispatcher("/WEB-INF/views/user/editevent.jsp").forward(req, resp);
         }
     }
 
-    /**
-     * POST /events/edit — Process the edit form and update the event.
-     */
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-
-        HttpSession session = request.getSession(false);
-        int userId = (int) session.getAttribute("userId");
-        String userRole = (String) session.getAttribute("userRole");
-
-        // Get form parameters
-        String eventIdStr = request.getParameter("eventId");
-        String title = request.getParameter("title");
-        String description = request.getParameter("description");
-        String eventDateStr = request.getParameter("eventDate");
-        String eventTimeStr = request.getParameter("eventTime");
-        String location = request.getParameter("location");
-        String category = request.getParameter("category");
-        String maxParticipantsStr = request.getParameter("maxParticipants");
-
+        int userId = SessionUtil.getUserId(req);
         try {
-            int eventId = Integer.parseInt(eventIdStr);
-
-            // Verify ownership
-            Event existing = eventService.findById(eventId);
-            if (existing == null) {
-                response.sendRedirect(request.getContextPath() + "/error/404");
-                return;
+            int eventId = Integer.parseInt(req.getParameter("eventId"));
+            Event existing = eventService.getEventById(eventId);
+            if (existing == null || existing.getHostId() != userId) {
+                resp.sendRedirect(req.getContextPath() + "/events/my"); return;
             }
-            if (existing.getUserId() != userId && !"admin".equals(userRole)) {
-                response.sendRedirect(request.getContextPath() + "/error/403");
-                return;
-            }
-
-            // Build updated Event object
-            Event event = new Event();
-            event.setEventId(eventId);
-            event.setUserId(existing.getUserId());
-            event.setTitle(title);
-            event.setDescription(description);
-
-            if (eventDateStr != null && !eventDateStr.trim().isEmpty()) {
-                event.setEventDate(Date.valueOf(eventDateStr));
-            }
-            if (eventTimeStr != null && !eventTimeStr.trim().isEmpty()) {
-                event.setEventTime(Time.valueOf(eventTimeStr + ":00"));
-            }
-
-            event.setLocation(location);
-            event.setCategory(category);
-
-            if (maxParticipantsStr != null && !maxParticipantsStr.trim().isEmpty()) {
-                event.setMaxParticipants(Integer.parseInt(maxParticipantsStr));
-            }
-
-            // Update event (resets status to pending)
-            eventService.updateEvent(event);
-
-            // Redirect to my events
-            response.sendRedirect(request.getContextPath() + "/events/my?success=updated");
-
-        } catch (IllegalArgumentException e) {
-            request.setAttribute("errorMsg", e.getMessage());
-            request.getRequestDispatcher("/WEB-INF/views/user/editEvent.jsp").forward(request, response);
+            existing.setTitle(req.getParameter("title"));
+            existing.setDescription(req.getParameter("description"));
+            existing.setCategory(req.getParameter("category"));
+            existing.setLocation(req.getParameter("location"));
+            existing.setMaxParticipants(Integer.parseInt(req.getParameter("maxParticipants")));
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            existing.setEventDate(sdf.parse(req.getParameter("eventDate")));
+            eventService.updateEvent(existing);
+            resp.sendRedirect(req.getContextPath() + "/events/my?success=updated");
+        } catch (Exception e) {
+            req.setAttribute("errorMsg", e.getMessage());
+            req.getRequestDispatcher("/WEB-INF/views/user/editevent.jsp").forward(req, resp);
         }
     }
 }

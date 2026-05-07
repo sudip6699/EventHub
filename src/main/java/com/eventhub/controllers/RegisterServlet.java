@@ -1,63 +1,54 @@
 package com.eventhub.controllers;
 
+import com.eventhub.model.User;
 import com.eventhub.service.UserService;
+import com.eventhub.util.EventHubException;
+import com.eventhub.util.SessionUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 
-/**
- * RegisterServlet — Handles user registration (GET shows form, POST registers).
- * On success, redirects to login page with success message.
- */
 @WebServlet("/register")
 public class RegisterServlet extends HttpServlet {
 
-    private UserService userService;
+    private final UserService userService = new UserService();
 
     @Override
-    public void init() throws ServletException {
-        userService = new UserService();
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        if (SessionUtil.isLoggedIn(req)) {
+            resp.sendRedirect(req.getContextPath() + "/dashboard");
+            return;
+        }
+        req.getRequestDispatcher("/WEB-INF/views/auth/register.jsp").forward(req, resp);
     }
 
-    /**
-     * GET /register — Display the registration form.
-     */
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        request.getRequestDispatcher("/WEB-INF/views/auth/register.jsp").forward(request, response);
-    }
-
-    /**
-     * POST /register — Process registration form.
-     */
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        // Get form parameters
-        String name = request.getParameter("name");
-        String email = request.getParameter("email");
-        String password = request.getParameter("password");
-        String confirmPassword = request.getParameter("confirmPassword");
-
+        String name     = req.getParameter("name");
+        String email    = req.getParameter("email");
+        String password = req.getParameter("password");
+        String phone    = req.getParameter("phone");
         try {
-            // Register user via service layer (validates + AES encrypts password)
-            userService.registerUser(name, email, password, confirmPassword);
-
-            // Success — redirect to login with success message
-            response.sendRedirect(request.getContextPath() + "/login?success=registered");
-
-        } catch (IllegalArgumentException e) {
-            // Validation failed — show error on registration form
-            request.setAttribute("errorMsg", e.getMessage());
-            request.setAttribute("name", name);     // Retain entered name
-            request.setAttribute("email", email);    // Retain entered email
-            request.getRequestDispatcher("/WEB-INF/views/auth/register.jsp").forward(request, response);
+            User u = new User();
+            u.setName(name);
+            u.setEmail(email);
+            u.setPassword(password);
+            u.setPhone(phone);
+            userService.register(u);
+            resp.sendRedirect(req.getContextPath() + "/login?success=registered");
+        } catch (EventHubException e) {
+            req.setAttribute("errorMsg", e.getMessage());
+            req.setAttribute("name",  name);
+            req.setAttribute("email", email);
+            req.setAttribute("phone", phone);
+            req.getRequestDispatcher("/WEB-INF/views/auth/register.jsp").forward(req, resp);
         }
     }
 }

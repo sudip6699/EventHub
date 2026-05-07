@@ -1,207 +1,74 @@
 package com.eventhub.service;
 
-import com.eventhub.config.DBConfig;
+import com.eventhub.dao.ParticipantDAO;
 import com.eventhub.model.Event;
+import com.eventhub.model.Participant;
+import com.eventhub.util.EventHubException;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-/**
- * ParticipantService — Business logic + JDBC for event_participants table.
- * Handles joining/leaving events and checking participation status.
- * Every database method follows the strict 6-step JDBC pattern.
- */
 public class ParticipantService {
 
-    // ========================================================
-    // JOIN / LEAVE EVENT
-    // ========================================================
+    private final ParticipantDAO participantDAO = new ParticipantDAO();
 
-    /**
-     * Adds a user as a participant to an event.
-     * Validates capacity and prevents duplicate joins.
-     *
-     * @throws IllegalArgumentException if join is not allowed
-     */
-    public void joinEvent(int userId, int eventId) {
-        // Check if already joined
-        if (isJoined(userId, eventId)) {
-            throw new IllegalArgumentException("You have already joined this event.");
-        }
-
-        Connection conn = null;
-        PreparedStatement ps = null;
+    public void joinEvent(int userId, int eventId) throws EventHubException {
         try {
-            // Step 2: Get connection
-            conn = DBConfig.getConnection();
-
-            // Step 3: Create PreparedStatement
-            String sql = "INSERT INTO event_participants (user_id, event_id) VALUES (?, ?)";
-            ps = conn.prepareStatement(sql);
-            ps.setInt(1, userId);
-            ps.setInt(2, eventId);
-
-            // Step 4: Execute update
-            ps.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Error joining event: " + e.getMessage(), e);
-        } finally {
-            // Step 6: Close all resources
-            closeResources(conn, ps, null);
+            if (participantDAO.isJoined(userId, eventId))
+                throw new EventHubException("You have already joined this event.");
+            Participant p = new Participant();
+            p.setUserId(userId);
+            p.setEventId(eventId);
+            p.setStatus("registered");
+            participantDAO.insert(p);
+        } catch (SQLException ex) {
+            throw new EventHubException("Could not join event.", ex);
         }
     }
 
-    /**
-     * Removes a user from an event's participant list.
-     */
-    public void leaveEvent(int userId, int eventId) {
-        Connection conn = null;
-        PreparedStatement ps = null;
-        try {
-            conn = DBConfig.getConnection();
-            String sql = "DELETE FROM event_participants WHERE user_id = ? AND event_id = ?";
-            ps = conn.prepareStatement(sql);
-            ps.setInt(1, userId);
-            ps.setInt(2, eventId);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw new RuntimeException("Error leaving event: " + e.getMessage(), e);
-        } finally {
-            closeResources(conn, ps, null);
-        }
+    // Alias used by ParticipantServlet
+    public void leaveEvent(int userId, int eventId) throws EventHubException {
+        cancelParticipation(userId, eventId);
     }
 
-    // ========================================================
-    // CHECK / COUNT
-    // ========================================================
-
-    /**
-     * Checks if a user has already joined a specific event.
-     */
-    public boolean isJoined(int userId, int eventId) {
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            conn = DBConfig.getConnection();
-            String sql = "SELECT 1 FROM event_participants WHERE user_id = ? AND event_id = ?";
-            ps = conn.prepareStatement(sql);
-            ps.setInt(1, userId);
-            ps.setInt(2, eventId);
-            rs = ps.executeQuery();
-            return rs.next(); // Returns true if a row exists
-        } catch (SQLException e) {
-            throw new RuntimeException("Error checking participation: " + e.getMessage(), e);
-        } finally {
-            closeResources(conn, ps, rs);
-        }
+    public void cancelParticipation(int userId, int eventId) throws EventHubException {
+        try { participantDAO.delete(userId, eventId); }
+        catch (SQLException ex) { throw new EventHubException("Could not cancel.", ex); }
     }
 
-    /**
-     * Counts the number of participants for a specific event.
-     */
-    public int countByEvent(int eventId) {
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            conn = DBConfig.getConnection();
-            String sql = "SELECT COUNT(*) FROM event_participants WHERE event_id = ?";
-            ps = conn.prepareStatement(sql);
-            ps.setInt(1, eventId);
-            rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt(1);
-            return 0;
-        } catch (SQLException e) {
-            throw new RuntimeException("Error counting participants: " + e.getMessage(), e);
-        } finally {
-            closeResources(conn, ps, rs);
-        }
+    public List<Participant> getParticipationsByUser(int userId) throws EventHubException {
+        try { return participantDAO.findByUser(userId); }
+        catch (SQLException ex) { throw new EventHubException("Could not fetch your events.", ex); }
     }
 
-    /**
-     * Counts how many events a user has joined.
-     */
-    public int countByUser(int userId) {
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            conn = DBConfig.getConnection();
-            String sql = "SELECT COUNT(*) FROM event_participants WHERE user_id = ?";
-            ps = conn.prepareStatement(sql);
-            ps.setInt(1, userId);
-            rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt(1);
-            return 0;
-        } catch (SQLException e) {
-            throw new RuntimeException("Error counting user participations: " + e.getMessage(), e);
-        } finally {
-            closeResources(conn, ps, rs);
-        }
+    public List<Participant> getParticipantsByEvent(int eventId) throws EventHubException {
+        try { return participantDAO.findByEvent(eventId); }
+        catch (SQLException ex) { throw new EventHubException("Could not fetch participants.", ex); }
     }
 
-    // ========================================================
-    // RETRIEVE JOINED EVENTS
-    // ========================================================
-
-    /**
-     * Returns all approved events that a user has joined.
-     */
-    public List<Event> getJoinedEvents(int userId) {
-        List<Event> events = new ArrayList<>();
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            conn = DBConfig.getConnection();
-            String sql = "SELECT e.*, u.name AS organizer_name FROM event_participants ep "
-                       + "JOIN events e ON ep.event_id = e.event_id "
-                       + "JOIN users u ON e.user_id = u.user_id "
-                       + "WHERE ep.user_id = ? ORDER BY e.event_date ASC";
-            ps = conn.prepareStatement(sql);
-            ps.setInt(1, userId);
-            rs = ps.executeQuery();
-
-            // Step 5: Process ResultSet into Event objects
-            while (rs.next()) {
-                Event event = new Event();
-                event.setEventId(rs.getInt("event_id"));
-                event.setUserId(rs.getInt("user_id"));
-                event.setTitle(rs.getString("title"));
-                event.setDescription(rs.getString("description"));
-                event.setEventDate(rs.getDate("event_date"));
-                event.setEventTime(rs.getTime("event_time"));
-                event.setLocation(rs.getString("location"));
-                event.setCategory(rs.getString("category"));
-                event.setStatus(rs.getString("status"));
-                int maxP = rs.getInt("max_participants");
-                event.setMaxParticipants(rs.wasNull() ? 0 : maxP);
-                event.setCreatedAt(rs.getTimestamp("created_at"));
-                try { event.setOrganizerName(rs.getString("organizer_name")); } catch (SQLException ignored) {}
-                events.add(event);
-            }
-            return events;
-        } catch (SQLException e) {
-            throw new RuntimeException("Error fetching joined events: " + e.getMessage(), e);
-        } finally {
-            closeResources(conn, ps, rs);
-        }
+    public boolean isJoined(int userId, int eventId) throws EventHubException {
+        try { return participantDAO.isJoined(userId, eventId); }
+        catch (SQLException ex) { throw new EventHubException("Could not check status.", ex); }
     }
 
-    // ========================================================
-    // HELPER METHODS
-    // ========================================================
+    public int countByUser(int userId) throws EventHubException {
+        try { return participantDAO.countByUser(userId); }
+        catch (SQLException ex) { throw new EventHubException("Count failed.", ex); }
+    }
 
-    /** Closes JDBC resources safely (Step 6 of JDBC) */
-    private void closeResources(Connection conn, PreparedStatement ps, ResultSet rs) {
-        try { if (rs != null) rs.close(); } catch (SQLException e) { /* log silently */ }
-        try { if (ps != null) ps.close(); } catch (SQLException e) { /* log silently */ }
-        try { if (conn != null) conn.close(); } catch (SQLException e) { /* log silently */ }
+    public int countByEvent(int eventId) throws EventHubException {
+        try { return participantDAO.countByEvent(eventId); }
+        catch (SQLException ex) { throw new EventHubException("Count failed.", ex); }
+    }
+
+    public Map<Integer, Boolean> buildJoinedMap(int userId, List<Event> events) {
+        Map<Integer, Boolean> map = new HashMap<>();
+        for (Event e : events) {
+            try { map.put(e.getEventId(), participantDAO.isJoined(userId, e.getEventId())); }
+            catch (SQLException ex) { map.put(e.getEventId(), false); }
+        }
+        return map;
     }
 }

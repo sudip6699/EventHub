@@ -1,54 +1,36 @@
 package com.eventhub.model;
 
 import java.io.Serializable;
-import java.sql.Timestamp;
+import java.util.Date;
 
-/**
- * Participant JavaBean — maps to the 'event_participants' table.
- * Represents a user joining an event.
- */
 public class Participant implements Serializable {
+    private static final long serialVersionUID = 1L;
 
-    // --- Fields matching database columns ---
-    private int id;
-    private int userId;       // FK → users(user_id)
-    private int eventId;      // FK → events(event_id)
-    private Timestamp joinedAt;
+    private int    participantId;
+    private int    eventId;
+    private int    userId;
+    private String status;
+    private Date   joinedAt;
 
-    // --- No-arg constructor (required for JavaBean) ---
     public Participant() {}
 
-    // --- Getters and Setters ---
+    public int    getParticipantId()                          { return participantId; }
+    public void   setParticipantId(int participantId)         { this.participantId = participantId; }
 
-    public int getId() {
-        return id;
-    }
+    public int    getEventId()                                { return eventId; }
+    public void   setEventId(int eventId)                     { this.eventId = eventId; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public int    getUserId()                                 { return userId; }
+    public void   setUserId(int userId)                       { this.userId = userId; }
 
-    public int getUserId() {
-        return userId;
-    }
+    public String getStatus()                                 { return status; }
+    public void   setStatus(String status)                    { this.status = status; }
 
-    public void setUserId(int userId) {
-        this.userId = userId;
-    }
+    public Date   getJoinedAt()                               { return joinedAt; }
+    public void   setJoinedAt(Date joinedAt)                  { this.joinedAt = joinedAt; }
 
-    public int getEventId() {
-        return eventId;
-    }
-
-    public void setEventId(int eventId) {
-        this.eventId = eventId;
-    }
-
-    public Timestamp getJoinedAt() {
-        return joinedAt;
-    }
-
-    public void setJoinedAt(Timestamp joinedAt) {
-        this.joinedAt = joinedAt;
+    @Override
+    public String toString() {
+        return "Participant{participantId=" + participantId + ", eventId=" + eventId + ", userId=" + userId + "}";
     }
 }

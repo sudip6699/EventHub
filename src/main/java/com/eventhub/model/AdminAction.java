@@ -1,92 +1,57 @@
 package com.eventhub.model;
 
 import java.io.Serializable;
-import java.sql.Timestamp;
+import java.util.Date;
 
-/**
- * AdminAction JavaBean — maps to the 'admin_actions' table.
- * Records every administrative action for audit trail.
- */
 public class AdminAction implements Serializable {
+    private static final long serialVersionUID = 1L;
 
-    // --- Fields matching database columns ---
-    private int actionId;
-    private int adminId;          // FK → users(user_id) of admin performing action
-    private String actionType;    // e.g. "APPROVE_EVENT", "REJECT_EVENT", "TOGGLE_ACTIVE"
-    private int targetId;         // ID of affected entity
-    private String targetType;    // "EVENT", "USER"
-    private String notes;         // Human-readable description
-    private Timestamp actionAt;   // When the action occurred
+    private int    actionId;
+    private int    adminId;
+    private String adminName;
+    private String actionType;
+    private String targetType;
+    private int    targetId;
+    private String description;
+    private String notes;
+    private Date   createdAt;
+    private Date   actionAt;
 
-    // --- Extra display field (not stored directly) ---
-    private String adminName;     // Joined from users table
-
-    // --- No-arg constructor (required for JavaBean) ---
     public AdminAction() {}
 
-    // --- Getters and Setters ---
+    public int    getActionId()                             { return actionId; }
+    public void   setActionId(int actionId)                 { this.actionId = actionId; }
 
-    public int getActionId() {
-        return actionId;
-    }
+    public int    getAdminId()                              { return adminId; }
+    public void   setAdminId(int adminId)                   { this.adminId = adminId; }
 
-    public void setActionId(int actionId) {
-        this.actionId = actionId;
-    }
+    public String getAdminName()                            { return adminName; }
+    public void   setAdminName(String adminName)            { this.adminName = adminName; }
 
-    public int getAdminId() {
-        return adminId;
-    }
+    public String getActionType()                           { return actionType; }
+    public void   setActionType(String actionType)          { this.actionType = actionType; }
 
-    public void setAdminId(int adminId) {
-        this.adminId = adminId;
-    }
+    public String getTargetType()                           { return targetType; }
+    public void   setTargetType(String targetType)          { this.targetType = targetType; }
 
-    public String getActionType() {
-        return actionType;
-    }
+    public int    getTargetId()                             { return targetId; }
+    public void   setTargetId(int targetId)                 { this.targetId = targetId; }
 
-    public void setActionType(String actionType) {
-        this.actionType = actionType;
-    }
+    public String getDescription()                          { return description; }
+    public void   setDescription(String description)        { this.description = description; }
 
-    public int getTargetId() {
-        return targetId;
-    }
+    public String getNotes()                                { return notes; }
+    public void   setNotes(String notes)                    { this.notes = notes; }
 
-    public void setTargetId(int targetId) {
-        this.targetId = targetId;
-    }
+    public Date   getCreatedAt()                            { return createdAt; }
+    public void   setCreatedAt(Date createdAt)              { this.createdAt = createdAt; }
 
-    public String getTargetType() {
-        return targetType;
-    }
+    // actionAt alias — some servlets use setActionAt instead of setCreatedAt
+    public Date   getActionAt()                             { return createdAt; }
+    public void   setActionAt(Date actionAt)                { this.createdAt = actionAt; }
 
-    public void setTargetType(String targetType) {
-        this.targetType = targetType;
-    }
-
-    public String getNotes() {
-        return notes;
-    }
-
-    public void setNotes(String notes) {
-        this.notes = notes;
-    }
-
-    public Timestamp getActionAt() {
-        return actionAt;
-    }
-
-    public void setActionAt(Timestamp actionAt) {
-        this.actionAt = actionAt;
-    }
-
-    public String getAdminName() {
-        return adminName;
-    }
-
-    public void setAdminName(String adminName) {
-        this.adminName = adminName;
+    @Override
+    public String toString() {
+        return "AdminAction{actionId=" + actionId + ", actionType='" + actionType + "'}";
     }
 }

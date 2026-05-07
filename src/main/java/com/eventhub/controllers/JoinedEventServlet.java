@@ -1,49 +1,65 @@
 package com.eventhub.controllers;
 
 import com.eventhub.model.Event;
+import com.eventhub.model.Participant;
+import com.eventhub.service.EventService;
 import com.eventhub.service.ParticipantService;
+import com.eventhub.util.SessionUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * JoinedEventsServlet — Shows events the logged-in user has joined.
- */
 @WebServlet("/events/joined")
 public class JoinedEventServlet extends HttpServlet {
 
-    private ParticipantService participantService;
+    private final EventService eventService           = new EventService();
+    private final ParticipantService participantService = new ParticipantService();
 
     @Override
-    public void init() throws ServletException {
-        participantService = new ParticipantService();
-    }
-
-    /**
-     * GET /events/joined — Display all events the user has joined.
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        HttpSession session = request.getSession(false);
-        int userId = (int) session.getAttribute("userId");
+        int userId = SessionUtil.getUserId(req);
+        List<Event> joinedEvents = new ArrayList<>();
 
-        // Fetch all events this user has joined
-        List<Event> joinedEvents = participantService.getJoinedEvents(userId);
-
-        // Add participant count to each event
-        for (Event event : joinedEvents) {
-            event.setParticipantCount(participantService.countByEvent(event.getEventId()));
+        try {
+            List<Participant> participations = participantService.getParticipationsByUser(userId);
+            for (Participant p : participations) {
+                Event e = eventService.getEventById(p.getEventId());
+                if (e != null) joinedEvents.add(e);
+            }
+        } catch (Exception e) {
+            req.setAttribute("errorMessage", "Could not load your tickets.");
         }
 
-        request.setAttribute("joinedEvents", joinedEvents);
-        request.getRequestDispatcher("/WEB-INF/views/user/joinedEvents.jsp").forward(request, response);
+        req.setAttribute("joinedEvents", joinedEvents);
+        req.getRequestDispatcher("/WEB-INF/views/user/joinedevents.jsp").forward(req, resp);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+
+        String action = req.getParameter("action");
+        int userId    = SessionUtil.getUserId(req);
+
+        if ("cancel".equals(action)) {
+            try {
+                int eventId = Integer.parseInt(req.getParameter("eventId"));
+                participantService.cancelParticipation(userId, eventId);
+                resp.sendRedirect(req.getContextPath() + "/events/joined?success=cancelled");
+            } catch (Exception e) {
+                resp.sendRedirect(req.getContextPath() + "/events/joined?error=cancelFailed");
+            }
+        } else {
+            resp.sendRedirect(req.getContextPath() + "/events/joined");
+        }
     }
 }

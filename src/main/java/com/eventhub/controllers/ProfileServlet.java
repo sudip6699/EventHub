@@ -1,99 +1,77 @@
 package com.eventhub.controllers;
 
 import com.eventhub.model.User;
-import com.eventhub.service.UserService;
-import com.eventhub.service.ParticipantService;
 import com.eventhub.service.EventService;
+import com.eventhub.service.ParticipantService;
+import com.eventhub.service.UserService;
+import com.eventhub.util.EventHubException;
+import com.eventhub.util.SessionUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+
 import java.io.IOException;
 
-/**
- * ProfileServlet — Handles viewing and updating user profile.
- * GET /profile — Show profile page
- * POST /profile — Update name/email or change password
- */
 @WebServlet("/profile")
 public class ProfileServlet extends HttpServlet {
 
-    private UserService userService;
-    private ParticipantService participantService;
-    private EventService eventService;
+    private final UserService        userService        = new UserService();
+    private final EventService       eventService       = new EventService();
+    private final ParticipantService participantService = new ParticipantService();
 
-    @Override
-    public void init() throws ServletException {
-        userService = new UserService();
-        participantService = new ParticipantService();
-        eventService = new EventService();
+    private void loadProfileAttributes(HttpServletRequest req, int userId) {
+        try { req.setAttribute("user", userService.getUserById(userId)); } catch (Exception ignored) {}
+        try { req.setAttribute("myEventCount", eventService.countByHost(userId)); } catch (Exception ignored) {}
+        try { req.setAttribute("joinedCount", participantService.countByUser(userId)); } catch (Exception ignored) {}
     }
 
-    /**
-     * GET /profile — Display the user's profile page.
-     */
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
+        int userId = SessionUtil.getUserId(req);
+        loadProfileAttributes(req, userId);
 
-        HttpSession session = request.getSession(false);
-        int userId = (int) session.getAttribute("userId");
+        // Surface success codes via query param so a redirect can carry them across
+        String success = req.getParameter("success");
+        if ("updated".equals(success))           req.setAttribute("successMsg", "Profile updated successfully.");
+        else if ("passwordChanged".equals(success)) req.setAttribute("successMsg", "Password changed successfully.");
 
-        // Fetch user details
-        User user = userService.findById(userId);
-        request.setAttribute("user", user);
-
-        // Fetch activity counts
-        request.setAttribute("myEventCount", eventService.getByUser(userId).size());
-        request.setAttribute("joinedCount", participantService.countByUser(userId));
-
-        request.getRequestDispatcher("/WEB-INF/views/user/profile.jsp").forward(request, response);
+        req.getRequestDispatcher("/WEB-INF/views/user/profile.jsp").forward(req, resp);
     }
 
-    /**
-     * POST /profile — Update profile or change password.
-     */
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-
-        HttpSession session = request.getSession(false);
-        int userId = (int) session.getAttribute("userId");
-        String action = request.getParameter("action");
-
+        int    userId = SessionUtil.getUserId(req);
+        String action = req.getParameter("action");
         try {
             if ("updateProfile".equals(action)) {
-                // --- Update name and email ---
-                String name = request.getParameter("name");
-                String email = request.getParameter("email");
-                userService.updateProfile(userId, name, email);
-
-                // Update session attributes
-                session.setAttribute("userName", name);
-
-                request.setAttribute("successMsg", "Profile updated successfully.");
-
+                User u = userService.getUserById(userId);
+                u.setName(req.getParameter("name"));
+                u.setPhone(req.getParameter("phone"));
+                u.setBio(req.getParameter("bio"));
+                userService.updateProfile(u);
+                resp.sendRedirect(req.getContextPath() + "/profile?success=updated");
             } else if ("changePassword".equals(action)) {
-                // --- Change password ---
-                String currentPassword = request.getParameter("currentPassword");
-                String newPassword = request.getParameter("newPassword");
-                String confirmPassword = request.getParameter("confirmPassword");
-                userService.changePassword(userId, currentPassword, newPassword, confirmPassword);
-
-                request.setAttribute("successMsg", "Password changed successfully.");
+                // The form posts "currentPassword" — accept either name for safety.
+                String oldPw  = req.getParameter("currentPassword");
+                if (oldPw == null) oldPw = req.getParameter("oldPassword");
+                String newPw  = req.getParameter("newPassword");
+                String confirmPw = req.getParameter("confirmPassword");
+                if (newPw != null && confirmPw != null && !newPw.equals(confirmPw))
+                    throw new EventHubException("New password and confirmation do not match.");
+                userService.changePassword(userId, oldPw, newPw);
+                resp.sendRedirect(req.getContextPath() + "/profile?success=passwordChanged");
+            } else {
+                resp.sendRedirect(req.getContextPath() + "/profile");
             }
-        } catch (IllegalArgumentException e) {
-            request.setAttribute("errorMsg", e.getMessage());
+        } catch (EventHubException e) {
+            loadProfileAttributes(req, userId);
+            req.setAttribute("errorMsg", e.getMessage());
+            req.getRequestDispatcher("/WEB-INF/views/user/profile.jsp").forward(req, resp);
         }
-
-        // Re-fetch user data and forward
-        User user = userService.findById(userId);
-        request.setAttribute("user", user);
-        request.setAttribute("myEventCount", eventService.getByUser(userId).size());
-        request.setAttribute("joinedCount", participantService.countByUser(userId));
-        request.getRequestDispatcher("/WEB-INF/views/user/profile.jsp").forward(request, response);
     }
 }

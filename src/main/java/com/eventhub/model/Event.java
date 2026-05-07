@@ -1,152 +1,77 @@
 package com.eventhub.model;
 
 import java.io.Serializable;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
+import java.util.Date;
 
-/**
- * Event JavaBean — maps to the 'events' table in eventhub database.
- * Follows JavaBean conventions: no-arg constructor + getters/setters.
- */
 public class Event implements Serializable {
+    private static final long serialVersionUID = 1L;
 
-    // --- Fields matching database columns ---
-    private int eventId;
-    private int userId;                // FK → users(user_id)
+    private int    eventId;
     private String title;
     private String description;
-    private Date eventDate;            // java.sql.Date for DATE column
-    private Time eventTime;            // java.sql.Time for TIME column
+    private String category;
     private String location;
-    private String category;           // Workshop, Seminar, Meetup, Cultural, Sports, Other
-    private String status;             // pending, approved, rejected
-    private int maxParticipants;       // 0 means unlimited
-    private Timestamp createdAt;
+    private Date   eventDate;
+    private Date   eventTime;
+    private int    maxParticipants;
+    private int    participantCount;
+    private String status;
+    private int    hostId;
+    private String organizerName;
+    private Date   createdAt;
 
-    // --- Extra fields for display (not in DB directly) ---
-    private String organizerName;      // Joined from users table
-    private int participantCount;      // Count from event_participants
+    public Event() {}
 
-    // --- No-arg constructor (required for JavaBean) ---
-    public Event() {
-        this.status = "pending";
-        this.maxParticipants = 0;
-    }
+    public int    getEventId()                              { return eventId; }
+    public void   setEventId(int eventId)                   { this.eventId = eventId; }
+    public int    getId()                                   { return eventId; }
+    public void   setId(int id)                             { this.eventId = id; }
 
-    // --- Getters and Setters ---
+    public String getTitle()                                { return title; }
+    public void   setTitle(String title)                    { this.title = title; }
 
-    public int getEventId() {
-        return eventId;
-    }
+    public String getDescription()                          { return description; }
+    public void   setDescription(String description)        { this.description = description; }
 
-    public void setEventId(int eventId) {
-        this.eventId = eventId;
-    }
+    public String getCategory()                             { return category; }
+    public void   setCategory(String category)              { this.category = category; }
 
-    public int getUserId() {
-        return userId;
-    }
+    public String getLocation()                             { return location; }
+    public void   setLocation(String location)              { this.location = location; }
 
-    public void setUserId(int userId) {
-        this.userId = userId;
-    }
+    public Date   getEventDate()                            { return eventDate; }
+    public void   setEventDate(Date eventDate)              { this.eventDate = eventDate; }
 
-    public String getTitle() {
-        return title;
-    }
+    public Date   getEventTime()                            { return eventTime; }
+    public void   setEventTime(Date eventTime)              { this.eventTime = eventTime; }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
+    public int    getMaxParticipants()                          { return maxParticipants; }
+    public void   setMaxParticipants(int maxParticipants)       { this.maxParticipants = maxParticipants; }
 
-    public String getDescription() {
-        return description;
-    }
+    public int    getParticipantCount()                         { return participantCount; }
+    public void   setParticipantCount(int participantCount)     { this.participantCount = participantCount; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public String getStatus()                               { return status; }
+    public void   setStatus(String status)                  { this.status = status; }
 
-    public Date getEventDate() {
-        return eventDate;
-    }
+    public int    getHostId()                               { return hostId; }
+    public void   setHostId(int hostId)                     { this.hostId = hostId; }
+    public int    getUserId()                               { return hostId; }
+    public void   setUserId(int userId)                     { this.hostId = userId; }
 
-    public void setEventDate(Date eventDate) {
-        this.eventDate = eventDate;
-    }
+    public String getOrganizerName()                        { return organizerName; }
+    public void   setOrganizerName(String organizerName)    { this.organizerName = organizerName; }
 
-    public Time getEventTime() {
-        return eventTime;
-    }
+    public Date   getCreatedAt()                            { return createdAt; }
+    public void   setCreatedAt(Date createdAt)              { this.createdAt = createdAt; }
 
-    public void setEventTime(Time eventTime) {
-        this.eventTime = eventTime;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public int getMaxParticipants() {
-        return maxParticipants;
-    }
-
-    public void setMaxParticipants(int maxParticipants) {
-        this.maxParticipants = maxParticipants;
-    }
-
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public String getOrganizerName() {
-        return organizerName;
-    }
-
-    public void setOrganizerName(String organizerName) {
-        this.organizerName = organizerName;
-    }
-
-    public int getParticipantCount() {
-        return participantCount;
-    }
-
-    public void setParticipantCount(int participantCount) {
-        this.participantCount = participantCount;
-    }
-
-    // --- Helper Methods ---
-
-    /**
-     * Returns a short excerpt of the description (first 120 characters).
-     */
     public String getExcerpt() {
-        if (description == null) return "";
-        return description.length() > 120 ? description.substring(0, 120) + "..." : description;
+        if (description == null || description.length() <= 120) return description;
+        return description.substring(0, 120) + "...";
+    }
+
+    @Override
+    public String toString() {
+        return "Event{eventId=" + eventId + ", title='" + title + "', status='" + status + "'}";
     }
 }

@@ -1,63 +1,74 @@
 package com.eventhub.controllers;
 
 import com.eventhub.model.Event;
+import com.eventhub.model.Participant;
+import com.eventhub.model.User;
 import com.eventhub.service.EventService;
 import com.eventhub.service.ParticipantService;
 import com.eventhub.service.UserService;
+import com.eventhub.util.SessionUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * UserDashboardServlet — Serves the logged-in user's main dashboard.
- * Shows upcoming events, joined events count, and user stats.
- */
 @WebServlet("/dashboard")
 public class UserDashboardServlet extends HttpServlet {
 
-    private EventService eventService;
-    private ParticipantService participantService;
-    private UserService userService;
+    private final EventService       eventService       = new EventService();
+    private final ParticipantService participantService = new ParticipantService();
+    private final UserService        userService        = new UserService();
 
     @Override
-    public void init() throws ServletException {
-        eventService = new EventService();
-        participantService = new ParticipantService();
-        userService = new UserService();
-    }
-
-    /**
-     * GET /dashboard — Display the user dashboard with stats and event lists.
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        // Get user ID from session
-        HttpSession session = request.getSession(false);
-        int userId = (int) session.getAttribute("userId");
+        int userId = SessionUtil.getUserId(req);
 
-        // Fetch dashboard data
-        List<Event> recentEvents = eventService.getRecentApproved(6);
-        List<Event> myEvents = eventService.getByUser(userId);
-        List<Event> joinedEvents = participantService.getJoinedEvents(userId);
+        // ---- Stat counters ----
+        int totalApproved = 0, totalUsers = 0, joinedCount = 0, myEventCount = 0;
+        try { totalApproved = eventService.countActiveEvents(); }       catch (Exception ignored) {}
+        try { totalUsers    = userService.countAllUsers(); }            catch (Exception ignored) {}
+        try { joinedCount   = participantService.countByUser(userId); } catch (Exception ignored) {}
+        try { myEventCount  = eventService.countByHost(userId); }       catch (Exception ignored) {}
 
-        // Set attributes for JSP
-        request.setAttribute("recentEvents", recentEvents);
-        request.setAttribute("myEvents", myEvents);
-        request.setAttribute("joinedEvents", joinedEvents);
-        request.setAttribute("myEventCount", myEvents.size());
-        request.setAttribute("joinedCount", joinedEvents.size());
-        request.setAttribute("totalApproved", eventService.countByStatus("approved"));
-        request.setAttribute("totalUsers", userService.countAll());
+        req.setAttribute("totalApproved", totalApproved);
+        req.setAttribute("totalUsers",    totalUsers);
+        req.setAttribute("joinedCount",   joinedCount);
+        req.setAttribute("myEventCount",  myEventCount);
 
-        // Forward to dashboard JSP
-        request.getRequestDispatcher("/WEB-INF/views/user/dashboard.jsp").forward(request, response);
+        // ---- Recent approved events ----
+        List<Event> recentEvents = new ArrayList<>();
+        try { recentEvents = eventService.getRecentApproved(6); } catch (Exception ignored) {}
+        req.setAttribute("recentEvents", recentEvents);
+
+        // ---- Joined events (full Event list, not Participant) ----
+        List<Event> joinedEvents = new ArrayList<>();
+        try {
+            List<Participant> parts = participantService.getParticipationsByUser(userId);
+            for (Participant p : parts) {
+                Event e = eventService.getEventById(p.getEventId());
+                if (e != null) joinedEvents.add(e);
+            }
+        } catch (Exception ignored) {}
+        req.setAttribute("joinedEvents", joinedEvents);
+
+        // ---- My events (events the user hosts) ----
+        List<Event> myEvents = new ArrayList<>();
+        try { myEvents = eventService.getEventsByHost(userId); } catch (Exception ignored) {}
+        req.setAttribute("myEvents", myEvents);
+
+        // ---- Current user object ----
+        User currentUser = null;
+        try { currentUser = userService.getUserById(userId); } catch (Exception ignored) {}
+        req.setAttribute("currentUser", currentUser);
+
+        req.getRequestDispatcher("/WEB-INF/views/user/dashboard.jsp").forward(req, resp);
     }
 }
