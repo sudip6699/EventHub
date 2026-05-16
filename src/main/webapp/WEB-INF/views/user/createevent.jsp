@@ -40,6 +40,50 @@
                      padding: 13px 16px; border-radius: 8px; margin-bottom: 20px; }
 .alert-ok          { background: #eafaf1; border: 1px solid #a9dfbf; color: #1e8449;
                      padding: 13px 16px; border-radius: 8px; margin-bottom: 20px; }
+
+/* Image upload */
+.img-upload-box {
+    border: 2px dashed #ddd; border-radius: 10px; padding: 28px;
+    text-align: center; cursor: pointer; background: #fafafa;
+    transition: border-color 0.2s;
+}
+.img-upload-box:hover { border-color: #c0392b; }
+.img-upload-box input[type="file"] { display: none; }
+.img-upload-icon { font-size: 36px; margin-bottom: 8px; }
+.img-upload-box p { color: #999; font-size: 0.85rem; margin: 0; }
+.img-upload-box strong { color: #c0392b; }
+#imgPreview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 12px; display: none; }
+
+/* Payment toggle */
+.payment-toggle { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.toggle-switch  { position: relative; width: 46px; height: 24px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider  {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #ddd; border-radius: 24px; transition: 0.3s;
+}
+.toggle-slider:before {
+    content: ""; position: absolute; width: 18px; height: 18px;
+    left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider { background: #c0392b; }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
+.toggle-label { font-size: 0.9rem; font-weight: 600; color: #444; }
+
+/* Payment method cards */
+.pay-methods { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.pay-method  {
+    flex: 1; min-width: 120px; border: 2px solid #ddd; border-radius: 10px;
+    padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s;
+    background: #fafafa;
+}
+.pay-method:hover { border-color: #c0392b; }
+.pay-method input[type="radio"] { display: none; }
+.pay-method.selected { border-color: #c0392b; background: #fdedec; }
+.pay-method img { height: 36px; object-fit: contain; margin-bottom: 6px; display: block; margin-left: auto; margin-right: auto; }
+.pay-method span { font-size: 0.82rem; font-weight: 600; color: #444; }
+#paidSection { display: none; }
+
 @media (max-width: 600px) { .form-row { flex-direction: column; } }
 </style>
 
@@ -57,7 +101,7 @@
         <div class="alert-ok">&#10003; ${success}</div>
       </c:if>
 
-      <form action="${pageContext.request.contextPath}/events/create" method="post">
+      <form action="${pageContext.request.contextPath}/events/create" method="post" enctype="multipart/form-data">
 
         <!-- Title -->
         <div class="form-group">
@@ -73,6 +117,18 @@
           <textarea id="description" name="description" rows="4"
                     placeholder="Describe your event in detail..."
                     required>${not empty param.description ? param.description : ''}</textarea>
+        </div>
+
+        <!-- Cover Image -->
+        <div class="form-group">
+          <label>Cover Image</label>
+          <div class="img-upload-box" onclick="document.getElementById('coverImage').click()">
+            <input type="file" id="coverImage" name="coverImage" accept="image/*" onchange="previewImage(this)" />
+            <div class="img-upload-icon">🖼️</div>
+            <p><strong>Click to upload</strong> a cover image</p>
+            <p>JPG, PNG, GIF — max 5MB</p>
+            <img id="imgPreview" src="#" alt="Preview" />
+          </div>
         </div>
 
         <!-- Date and Time -->
@@ -106,6 +162,10 @@
               <option value="Meetup">Meetup</option>
               <option value="Cultural">Cultural</option>
               <option value="Sports">Sports</option>
+              <option value="Music">Music</option>
+              <option value="Food">Food</option>
+              <option value="Tech">Tech</option>
+              <option value="Adventure">Adventure</option>
               <option value="Other">Other</option>
             </select>
           </div>
@@ -117,8 +177,49 @@
           </div>
         </div>
 
+        <!-- Payment Toggle -->
+        <div class="form-group">
+          <label>Ticket Pricing</label>
+          <div class="payment-toggle">
+            <label class="toggle-switch">
+              <input type="checkbox" id="isPaidToggle" name="isPaid" value="true" onchange="togglePayment(this)" />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label" id="toggleLabel">Free Event</span>
+          </div>
+
+          <!-- Paid section — hidden until toggled on -->
+          <div id="paidSection">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="ticketPrice">Ticket Price (Rs.) <span class="req">*</span></label>
+                <input type="number" id="ticketPrice" name="ticketPrice" min="1" placeholder="e.g. 500" />
+              </div>
+            </div>
+
+            <label style="font-size:0.88rem;font-weight:600;color:#444;margin-bottom:8px;display:block;">Payment Method</label>
+            <div class="pay-methods">
+              <label class="pay-method" id="pm-esewa" onclick="selectPayment('esewa')">
+                <input type="radio" name="paymentMethod" value="esewa" />
+                <img src="${pageContext.request.contextPath}/images/esewa.jpg" alt="eSewa" />
+                <span>eSewa</span>
+              </label>
+              <label class="pay-method" id="pm-khalti" onclick="selectPayment('khalti')">
+                <input type="radio" name="paymentMethod" value="khalti" />
+                <img src="${pageContext.request.contextPath}/images/khalti.jpg" alt="Khalti" />
+                <span>Khalti</span>
+              </label>
+              <label class="pay-method" id="pm-both" onclick="selectPayment('both')">
+                <input type="radio" name="paymentMethod" value="both" />
+                <div style="font-size:24px;margin-bottom:6px;">💳</div>
+                <span>Both</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         <!-- Buttons -->
-        <div style="margin-top: 10px;">
+        <div style="margin-top: 24px;">
           <a href="${pageContext.request.contextPath}/dashboard" class="btn-cancel">Cancel</a>
           <button type="submit" class="btn-create">&#127775; Create Event</button>
         </div>
@@ -127,5 +228,42 @@
     </div>
   </div>
 </main>
+
+<script>
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const preview = document.getElementById('imgPreview');
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function togglePayment(checkbox) {
+    const section = document.getElementById('paidSection');
+    const label   = document.getElementById('toggleLabel');
+    const price   = document.getElementById('ticketPrice');
+    if (checkbox.checked) {
+        section.style.display = 'block';
+        label.textContent = 'Paid Event';
+        price.required = true;
+    } else {
+        section.style.display = 'none';
+        label.textContent = 'Free Event';
+        price.required = false;
+    }
+}
+
+function selectPayment(method) {
+    ['esewa','khalti','both'].forEach(m => {
+        document.getElementById('pm-' + m).classList.remove('selected');
+    });
+    document.getElementById('pm-' + method).classList.add('selected');
+    document.querySelector(`input[value="${method}"]`).checked = true;
+}
+</script>
 
 <%@ include file="/WEB-INF/views/common/footer.jsp" %>

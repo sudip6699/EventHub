@@ -20,13 +20,17 @@ public class EventDAO extends BaseDAO {
         e.setStatus(rs.getString("status"));
         e.setHostId(rs.getInt("host_id"));
         e.setCreatedAt(rs.getTimestamp("created_at"));
+        e.setImagePath(rs.getString("image_path"));
+        e.setIsPaid(rs.getInt("is_paid") == 1);
+        e.setTicketPrice(rs.getDouble("ticket_price"));
         return e;
     }
 
     public int insert(Event e) throws SQLException {
         String sql = "INSERT INTO events (title, description, category, location, " +
-                     "event_date, event_time, max_participants, status, host_id) " +
-                     "VALUES (?,?,?,?,?,?,?,?,?)";
+                     "event_date, event_time, max_participants, status, host_id, " +
+                     "image_path, is_paid, ticket_price) " +
+                     "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
         try (Connection c = getConnection();
              PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, e.getTitle());
@@ -34,11 +38,17 @@ public class EventDAO extends BaseDAO {
             ps.setString(3, e.getCategory());
             ps.setString(4, e.getLocation());
             ps.setDate(5, new java.sql.Date(e.getEventDate().getTime()));
-            if (e.getEventTime() != null) ps.setTime(6, new java.sql.Time(e.getEventTime().getTime()));
-            else                          ps.setNull(6, java.sql.Types.TIME);
+            if (e.getEventTime() != null) {
+                ps.setTime(6, new java.sql.Time(e.getEventTime().getTime()));
+            } else {
+                ps.setNull(6, java.sql.Types.TIME);
+            }
             ps.setInt(7, e.getMaxParticipants());
             ps.setString(8, e.getStatus() != null ? e.getStatus() : "pending");
             ps.setInt(9, e.getHostId());
+            ps.setString(10, e.getImagePath());
+            ps.setInt(11, e.isPaid() ? 1 : 0);
+            ps.setDouble(12, e.getTicketPrice());
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 return keys.next() ? keys.getInt(1) : -1;
@@ -146,8 +156,8 @@ public class EventDAO extends BaseDAO {
 
     public boolean update(Event e) throws SQLException {
         String sql = "UPDATE events SET title=?, description=?, category=?, location=?, " +
-                     "event_date=?, event_time=?, max_participants=?, status=? " +
-                     "WHERE event_id=?";
+                     "event_date=?, event_time=?, max_participants=?, status=?, image_path=?, " +
+                     "is_paid=?, ticket_price=? WHERE event_id=?";
         try (Connection c = getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, e.getTitle());
@@ -155,11 +165,17 @@ public class EventDAO extends BaseDAO {
             ps.setString(3, e.getCategory());
             ps.setString(4, e.getLocation());
             ps.setDate(5, new java.sql.Date(e.getEventDate().getTime()));
-            if (e.getEventTime() != null) ps.setTime(6, new java.sql.Time(e.getEventTime().getTime()));
-            else                          ps.setNull(6, java.sql.Types.TIME);
+            if (e.getEventTime() != null) {
+                ps.setTime(6, new java.sql.Time(e.getEventTime().getTime()));
+            } else {
+                ps.setNull(6, java.sql.Types.TIME);
+            }
             ps.setInt(7, e.getMaxParticipants());
             ps.setString(8, e.getStatus());
-            ps.setInt(9, e.getEventId());
+            ps.setString(9, e.getImagePath());
+            ps.setInt(10, e.isPaid() ? 1 : 0);
+            ps.setDouble(11, e.getTicketPrice());
+            ps.setInt(12, e.getEventId());
             return ps.executeUpdate() > 0;
         }
     }

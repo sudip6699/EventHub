@@ -19,6 +19,9 @@ public class Event implements Serializable {
     private int    hostId;
     private String organizerName;
     private Date   createdAt;
+    private String imagePath;
+    private boolean isPaid;
+    private double  ticketPrice;
 
     public Event() {}
 
@@ -64,6 +67,16 @@ public class Event implements Serializable {
 
     public Date   getCreatedAt()                            { return createdAt; }
     public void   setCreatedAt(Date createdAt)              { this.createdAt = createdAt; }
+
+    public String getImagePath()                            { return imagePath; }
+    public void   setImagePath(String imagePath)            { this.imagePath = imagePath; }
+
+    public boolean isPaid()                                 { return isPaid; }
+    public void    setIsPaid(boolean isPaid)                { this.isPaid = isPaid; }
+    public void    setPaid(boolean isPaid)                  { this.isPaid = isPaid; }
+
+    public double  getTicketPrice()                         { return ticketPrice; }
+    public void    setTicketPrice(double ticketPrice)       { this.ticketPrice = ticketPrice; }
 
     public String getExcerpt() {
         if (description == null || description.length() <= 120) return description;

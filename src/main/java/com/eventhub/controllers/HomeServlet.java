@@ -23,9 +23,12 @@ public class HomeServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        // If already logged in, go straight to dashboard
         if (SessionUtil.isLoggedIn(req)) {
-            resp.sendRedirect(req.getContextPath() + "/dashboard");
+            if (SessionUtil.isAdmin(req)) {
+                resp.sendRedirect(req.getContextPath() + "/admin/dashboard");
+            } else {
+                resp.sendRedirect(req.getContextPath() + "/dashboard");
+            }
             return;
         }
 
